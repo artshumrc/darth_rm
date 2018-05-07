@@ -1,0 +1,954 @@
+Russian Modules Neo4j Database Creation/Recreation Instructions
+
+
+INTRODUCTION***********************************************
+
+The following instructions detail how to populate the Russian Modules Neo4j database from scratch using the command line built into the Neo4j interface. This may be useful if a mistake was made in the original database that cannot be undone, or if you would like to start with a fresh copy.
+
+
+INITIAL ENTRY**********************************************
+
+	The Excel file has a number of columns listed as 'NA', these should be replaced with blank spaces.
+	The headers of the Excel file often use periods, such as 'russian.stressed', these should be replaced with underscores.
+	Finally, the file should then be saved as a CSV file. If saving from Excel, make sure to save it as UTF-8.
+	
+
+LEMMAS - CONSTRAINTS**********************************************
+
+CREATE INDEX ON :Lexeme(label);
+CREATE CONSTRAINT ON (lex:Lexeme) ASSERT lex.id IS UNIQUE;
+CREATE INDEX ON :Inflection(label);
+CREATE CONSTRAINT ON (dom:Domain) ASSERT dom.label is UNIQUE
+CREATE CONSTRAINT ON (trans:Translation) ASSERT trans.label is UNIQUE
+
+
+LEMMAS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MERGE (lex:Lexeme {id: row.UniqueID, label: row.Russian, pos: row.POS, level: row.Level})
+FOREACH(skip IN CASE WHEN trim(row.Gender) <> "" THEN [1] ELSE [] END | SET lex.gender = row.Gender)
+FOREACH(skip IN CASE WHEN trim(row.Animacy) <> "" THEN [1] ELSE [] END | SET lex.animacy = row.Animacy)
+FOREACH(skip IN CASE WHEN trim(row.Count) <> "" THEN [1] ELSE [] END | SET lex.count = row.Count)
+FOREACH(skip IN CASE WHEN trim(row.Stressed_Russian) <> "" THEN [1] ELSE [] END | SET lex.stressed = row.Stressed_Russian)
+FOREACH(skip IN CASE WHEN trim(row.Rank) <> "" THEN [1] ELSE [] END | SET lex.rank = row.Rank)
+FOREACH(skip IN CASE WHEN trim(row.Reverse_Lexeme) <> "" THEN [1] ELSE [] END | SET lex.reverse = row.Reverse_Lexeme)
+FOREACH(skip IN CASE WHEN trim(row.stem) <> "" THEN [1] ELSE [] END | SET lex.stem = row.stem)
+FOREACH(skip IN CASE WHEN trim(row.ending) <> "" THEN [1] ELSE [] END | SET lex.ending = row.ending)
+
+
+TRANSLATIONS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.English, ";") AS translations
+MATCH (lex:Lexeme {id: row.UniqueID})
+UNWIND translations as translation
+MERGE (trans:Translation {label: trim(translation), lang: 'en'})
+MERGE (lex)-[:TRANSLATES_TO]->(trans)
+
+
+
+DOMAINS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.Domain, ";") AS domains
+MATCH (lex:Lexeme {id: row.UniqueID})
+UNWIND domains as domain
+MERGE (dom:Domain {label: trim(domain)})
+MERGE (lex)-[:HAS_DOMAIN]->(dom)
+
+
+
+
+ADJECTIVES**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mNOMsg, type: 'mNOMsg', stressed: row.mNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine nominative singular'}]->(inf)) 
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mACCsgAN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mACCsgAN, type: 'mACCsgAN', stressed: row.mACCsgAN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine accusative singular animate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mACCsgIN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mACCsgIN, type: 'mACCsgIN', stressed: row.mACCsgIN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine accusative singular inanimate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mGENsg, type: 'mGENsg', stressed: row.mGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mLOCsg, type: 'mLOCsg', stressed: row.mLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mDATsg, type: 'mDATsg', stressed: row.mDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mINSTsg, type: 'mINSTsg', stressed: row.mINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nNOMsg, type: 'nNOMsg', stressed: row.nNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nACCsg, type: 'nACCsg', stressed: row.nACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nGENsg, type: 'nGENsg', stressed: row.nGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nLOCsg, type: 'nLOCsg', stressed: row.nLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nDATsg, type: 'nDATsg', stressed: row.nDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nINSTsg, type: 'nINSTsg', stressed: row.nINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fNOMsg, type: 'fNOMsg', stressed: row.fNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fACCsg, type: 'fACCsg', stressed: row.fACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fGENsg, type: 'fGENsg', stressed: row.fGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fLOCsg, type: 'fLOCsg', stressed: row.fLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fDATsg, type: 'fDATsg', stressed: row.fDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fINSTsg, type: 'fINSTsg', stressed: row.fINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fINSTaltsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fINSTaltsg, type: 'fINSTaltsg', stressed: row.fINSTaltsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine alternative instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.NOMpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMpl, type: 'NOMpl', stressed: row.NOMpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.ACCplAN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCplAN, type: 'ACCplAN', stressed: row.ACCplAN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural animate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.ACCplIN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCplIN, type: 'ACCplIN', stressed: row.ACCplIN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural inanimate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.GENpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENpl, type: 'GENpl', stressed: row.GENpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.LOCpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCpl, type: 'LOCpl', stressed: row.LOCpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.DATpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATpl, type: 'DATpl', stressed: row.DATpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.INSTpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTpl, type: 'INSTpl', stressed: row.INSTpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.mshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mshort, type: 'mshort', stressed: row.mshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.nshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nshort, type: 'nshort', stressed: row.nshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.fshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fshort, type: 'fshort', stressed: row.fshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adj'})
+FOREACH(skip IN CASE WHEN trim(row.plshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.plshort, type: 'plshort', stressed: row.plshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'plural short'}]->(inf))
+
+
+
+ADJECTIVE PRONOUNS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mNOMsg, type: 'mNOMsg', stressed: row.mNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine nominative singular'}]->(inf)) 
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mACCsgAN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mACCsgAN, type: 'mACCsgAN', stressed: row.mACCsgAN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine accusative singular animate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mACCsgIN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mACCsgIN, type: 'mACCsgIN', stressed: row.mACCsgIN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine accusative singular inanimate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mGENsg, type: 'mGENsg', stressed: row.mGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mLOCsg, type: 'mLOCsg', stressed: row.mLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mDATsg, type: 'mDATsg', stressed: row.mDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mINSTsg, type: 'mINSTsg', stressed: row.mINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nNOMsg, type: 'nNOMsg', stressed: row.nNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nACCsg, type: 'nACCsg', stressed: row.nACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nGENsg, type: 'nGENsg', stressed: row.nGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nLOCsg, type: 'nLOCsg', stressed: row.nLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nDATsg, type: 'nDATsg', stressed: row.nDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nINSTsg, type: 'nINSTsg', stressed: row.nINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fNOMsg, type: 'fNOMsg', stressed: row.fNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fACCsg, type: 'fACCsg', stressed: row.fACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fGENsg, type: 'fGENsg', stressed: row.fGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fLOCsg, type: 'fLOCsg', stressed: row.fLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fDATsg, type: 'fDATsg', stressed: row.fDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fINSTsg, type: 'fINSTsg', stressed: row.fINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fINSTaltsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fINSTaltsg, type: 'fINSTaltsg', stressed: row.fINSTaltsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine alternative instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.NOMpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMpl, type: 'NOMpl', stressed: row.NOMpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.ACCplAN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCplAN, type: 'ACCplAN', stressed: row.ACCplAN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural animate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.ACCplIN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCplIN, type: 'ACCplIN', stressed: row.ACCplIN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural inanimate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.GENpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENpl, type: 'GENpl', stressed: row.GENpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.LOCpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCpl, type: 'LOCpl', stressed: row.LOCpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.DATpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATpl, type: 'DATpl', stressed: row.DATpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.INSTpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTpl, type: 'INSTpl', stressed: row.INSTpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.mshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mshort, type: 'mshort', stressed: row.mshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.nshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nshort, type: 'nshort', stressed: row.nshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.fshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fshort, type: 'fshort', stressed: row.fshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adjpron'})
+FOREACH(skip IN CASE WHEN trim(row.plshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.plshort, type: 'plshort', stressed: row.plshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'plural short'}]->(inf))
+
+
+
+ADVERBS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'adv'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'adverb'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'adverb'}]->(inf)
+
+
+
+ADVERB ADJECTIVE**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'advadj'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'adverbial adjective'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'adverbial adjective'}]->(inf)
+
+
+
+CARDINAL NUMBERS**********************************************
+
+	(ADJECTIVAL)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mNOMsg, type: 'mNOMsg', stressed: row.mNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine nominative singular'}]->(inf)) 
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mACCsgAN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mACCsgAN, type: 'mACCsgAN', stressed: row.mACCsgAN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine accusative singular animate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mACCsgIN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mACCsgIN, type: 'mACCsgIN', stressed: row.mACCsgIN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine accusative singular inanimate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mGENsg, type: 'mGENsg', stressed: row.mGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mLOCsg, type: 'mLOCsg', stressed: row.mLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mDATsg, type: 'mDATsg', stressed: row.mDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mINSTsg, type: 'mINSTsg', stressed: row.mINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nNOMsg, type: 'nNOMsg', stressed: row.nNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nACCsg, type: 'nACCsg', stressed: row.nACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nGENsg, type: 'nGENsg', stressed: row.nGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nLOCsg, type: 'nLOCsg', stressed: row.nLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nDATsg, type: 'nDATsg', stressed: row.nDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nINSTsg, type: 'nINSTsg', stressed: row.nINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fNOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fNOMsg, type: 'fNOMsg', stressed: row.fNOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fACCsg, type: 'fACCsg', stressed: row.fACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fGENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fGENsg, type: 'fGENsg', stressed: row.fGENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fLOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fLOCsg, type: 'fLOCsg', stressed: row.fLOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fDATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fDATsg, type: 'fDATsg', stressed: row.fDATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fINSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fINSTsg, type: 'fINSTsg', stressed: row.fINSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fINSTaltsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fINSTaltsg, type: 'fINSTaltsg', stressed: row.fINSTaltsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine alternative instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.NOMpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMpl, type: 'NOMpl', stressed: row.NOMpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.ACCplAN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCplAN, type: 'ACCplAN', stressed: row.ACCplAN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural animate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.ACCplIN) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCplIN, type: 'ACCplIN', stressed: row.ACCplIN_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural inanimate'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.GENpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENpl, type: 'GENpl', stressed: row.GENpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.LOCpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCpl, type: 'LOCpl', stressed: row.LOCpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.DATpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATpl, type: 'DATpl', stressed: row.DATpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.INSTpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTpl, type: 'INSTpl', stressed: row.INSTpl_stressed_1}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.mshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.mshort, type: 'mshort', stressed: row.mshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.nshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.nshort, type: 'nshort', stressed: row.nshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.fshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.fshort, type: 'fshort', stressed: row.fshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine short'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.plshort) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.plshort, type: 'plshort', stressed: row.plshort_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'plural short'}]->(inf))
+
+	(NOMINAL)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.NOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMsg, type: 'NOMsg', stressed: row.NOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.ACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCsg, type: 'ACCsg', stressed: row.ACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.GENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENsg, type: 'GENsg', stressed: row.GENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.LOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCsg, type: 'LOCsg', stressed: row.LOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.DATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATsg, type: 'DATsg', stressed: row.DATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.INSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTsg, type: 'INSTsg', stressed: row.INSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.INSTaltsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTaltsg, type: 'INSTaltsg', stressed: row.INSTaltsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'alternative instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.NOMpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMpl, type: 'NOMpl', stressed: row.NOMpl_stressed_x}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.ACCpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCpl, type: 'ACCpl', stressed: row.ACCpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.GENpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENpl, type: 'GENpl', stressed: row.GENpl_stressed_x}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.LOCpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCpl, type: 'LOCpl', stressed: row.LOCpl_stressed_x}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.DATpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATpl, type: 'DATpl', stressed: row.DATpl_stressed_x}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.INSTpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTpl, type: 'INSTpl', stressed: row.INSTpl_stressed_x}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf))
+
+	(FIX THESE)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.NOMpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMpl_x, type: 'NOMpl', stressed: row.NOMpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.GENpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENpl_x, type: 'GENpl', stressed: row.GENpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.LOCpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCpl_x, type: 'LOCpl', stressed: row.LOCpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.DATpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATpl_x, type: 'DATpl', stressed: row.DATpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'card'})
+FOREACH(skip IN CASE WHEN trim(row.INSTpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTpl_x, type: 'INSTpl', stressed: row.INSTpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf))
+
+
+
+
+
+CONJUNCTIONS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'conj', level: '1E'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'conjunction'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'conjunction'}]->(inf)
+
+
+
+DISCOURSE**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'disc', level: '1E'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'discourse'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'discourse'}]->(inf)
+
+
+
+INDEFINITE**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'indef'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'indefinite'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'indefinite'}]->(inf)
+
+
+
+MISCELLANEA**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'misc'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'miscellaneous'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'miscellaneous'}]->(inf)
+
+
+
+MODAL**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'modal'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'modal'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'modal'}]->(inf)
+
+
+
+NOUNS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.NOMsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMsg, type: 'NOMsg', stressed: row.NOMsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.ACCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCsg, type: 'ACCsg', stressed: row.ACCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.GENsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENsg, type: 'GENsg', stressed: row.GENsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.GEN2sg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GEN2sg, type: 'GEN2sg', stressed: row.GEN2sg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'secondary genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.GEN2sg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GEN3sg, type: 'GEN3sg', stressed: row.GEN3sg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'tertiary genitive singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.LOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCsg, type: 'LOCsg', stressed: row.LOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.LOC2sg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOC2sg, type: 'LOC2sg', stressed: row.LOC2sg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'secondary locative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.DATsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATsg, type: 'DATsg', stressed: row.DATsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.INSTsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTsg, type: 'INSTsg', stressed: row.INSTsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.INSTaltsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTaltsg, type: 'INSTaltsg', stressed: row.INSTaltsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'alternative instrumental singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.VOCsg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.VOCsg, type: 'VOCsg', stressed: row.VOCsg_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'vocative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.NOMpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.NOMpl_x, type: 'NOMpl', stressed: row.NOMpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.ACCpl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.ACCpl, type: 'ACCpl', stressed: row.ACCpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.GENpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.GENpl_x, type: 'GENpl', stressed: row.GENpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.LOCpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.LOCpl_x, type: 'LOCpl', stressed: row.LOCpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.DATpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.DATpl_x, type: 'DATpl', stressed: row.DATpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'noun'})
+FOREACH(skip IN CASE WHEN trim(row.INSTpl_x) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.INSTpl_x, type: 'INSTpl', stressed: row.INSTpl_stressed}) CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf))
+
+
+
+
+ORDINAL NUMBERS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'ord'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'ordinal'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'ordinal'}]->(inf)
+
+
+
+PARTICLES**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'particle'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'particle'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'particle'}]->(inf)
+
+
+
+PREFIXES**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'prefix'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'prefix'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'prefix'}]->(inf)
+
+
+
+PREPOSITIONS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'prep'})
+CREATE (inf:Inflection {label: lex.label, stressed: lex.stressed, type: 'preposition'})
+CREATE (lex)-[:INFLECTS_TO {rel: 'preposition'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.X2ndary_Russian, ";") AS altforms
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'prep'})
+CREATE (inf:Inflection {label: altforms[1], type:'prep'})
+CREATE (lex)-[r:INFLECTS_TO]->(inf)
+
+MATCH (a:Lexeme)-[r:INFLECTS_TO]->(b {type:'prep'})
+WHERE NOT EXISTS (b.label)
+DELETE r,b
+
+
+PRONOUNS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.NOMsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'NOMsg', stressed: row.NOMsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'nominative singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.ACCsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'ACCsg', stressed: row.ACCsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'accusative singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.GENsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'GENsg', stressed: row.GENsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'genitive singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.GEN2sg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'GEN2sg', stressed: row.GEN2sg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'secondary genitive singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.GEN3sg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'GEN3sg', stressed: row.GEN3sg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'tertiary genitive singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.LOCsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'LOCsg', stressed: row.LOCsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'locative singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.LOC2sg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'LOC2sg', stressed: row.LOC2sg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'secondary locative singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.DATsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'DATsg', stressed: row.DATsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'dative singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.INSTsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'INSTsg', stressed: row.INSTsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.INSTaltsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'INSTaltsg', stressed: row.INSTaltsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'alternative instrumental singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.VOCsg, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'VOCsg', stressed: row.VOCsg_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'vocative singular'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.NOMpl_x, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'NOMpl', stressed: row.NOMpl_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'nominative plural'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.ACCpl, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'ACCpl', stressed: row.ACCpl_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'accusative plural'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.GENpl_x, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'GENpl', stressed: row.GENpl_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'genitive plural'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.LOCpl_x, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'LOCpl', stressed: row.LOCpl_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'locative plural'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.DATpl_x, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'DATpl', stressed: row.DATpl_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'dative plural'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.INSTpl_x, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'pron'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'INSTpl', stressed: row.INSTpl_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'instrumental plural'}]->(inf)
+
+
+
+
+VERB PAIRS**********************************************
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+SET lex.aspect = row.Aspect
+SET lex.transitivity = row.Transitivity
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.sg1) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.sg1, type: 'sg1', stressed: row.sg1_stressed, freq: row.Freq_sg1, prop: row.Prop_sg1}) CREATE (lex)-[:INFLECTS_TO {rel: 'first person singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.sg2) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.sg2, type: 'sg2', stressed: row.sg2_stressed, freq: row.Freq_sg2, prop: row.Prop_sg2}) CREATE (lex)-[:INFLECTS_TO {rel: 'second person singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.sg3) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.sg3, type: 'sg3', stressed: row.sg3_stressed, freq: row.Freq_sg3, prop: row.Prop_sg3}) CREATE (lex)-[:INFLECTS_TO {rel: 'third person singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.pl1) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.pl1, type: 'pl1', stressed: row.pl1_stressed, freq: row.Freq_pl1, prop: row.Prop_pl1}) CREATE (lex)-[:INFLECTS_TO {rel: 'first person plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.pl2) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.pl2, type: 'pl2', stressed: row.pl2_stressed, freq: row.Freq_pl2, prop: row.Prop_pl2}) CREATE (lex)-[:INFLECTS_TO {rel: 'second person singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.pl3) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.pl3, type: 'pl3', stressed: row.pl3_stressed, freq: row.Freq_pl3, prop: row.Prop_pl3}) CREATE (lex)-[:INFLECTS_TO {rel: 'third person plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.Mpast) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.Mpast, type: 'Mpast', stressed: row.Mpast_stressed, freq: row.Freq_Mpast, prop: row.Prop_Mpast}) CREATE (lex)-[:INFLECTS_TO {rel: 'masculine past'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.Fpast) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.Fpast, type: 'Fpast', stressed: row.Fpast_stressed, freq: row.Freq_Fpast, prop: row.Prop_Fpast}) CREATE (lex)-[:INFLECTS_TO {rel: 'feminine past'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.Npast) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.Npast, type: 'Npast', stressed: row.Npast_stressed, freq: row.Freq_Npast, prop: row.Prop_Npast}) CREATE (lex)-[:INFLECTS_TO {rel: 'neuter past'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.Ppast) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.Ppast, type: 'Ppast', stressed: row.Ppast_stressed, freq: row.Freq_Ppast, prop: row.Prop_Ppast}) CREATE (lex)-[:INFLECTS_TO {rel: 'plural past'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.Imper_sg) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.Imper_sg, type: 'Imper_sg', stressed: row.Imper_sg_stressed, freq: row.Freq_Imper_sg, prop: row.Prop_Imper_sg}) CREATE (lex)-[:INFLECTS_TO {rel: 'imperative singular'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.Imper_pl) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.Imper_pl, type: 'Imper_pl', stressed: row.Imper_pl_stressed, freq: row.Freq_Imper_pl, prop: row.Prop_Imper_pl}) CREATE (lex)-[:INFLECTS_TO {rel: 'imperative plural'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.PrAP) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.PrAP, type: 'PrAP', stressed: row.PrAP_stressed, freq: row.Freq_PrAP, prop: row.Prop_PrAP}) CREATE (lex)-[:INFLECTS_TO {rel: 'present active participle'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.PAP) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.PAP, type: 'PAP', stressed: row.PAP_stressed, freq: row.Freq_PAP, prop: row.Prop_PAP}) CREATE (lex)-[:INFLECTS_TO {rel: 'past active participle'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.PrPP) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.PrPP, type: 'PrPP', stressed: row.PrPP_stressed, freq: row.Freq_PrPP, prop: row.Prop_PrPP}) CREATE (lex)-[:INFLECTS_TO {rel: 'present passive participle'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.PPP) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.PPP, type: 'PPP', stressed: row.PPP_stressed, freq: row.Freq_PPP, prop: row.Prop_PPP}) CREATE (lex)-[:INFLECTS_TO {rel: 'past passive participle'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.VbAdv1) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.VbAdv1, type: 'VbAdv1', stressed: row.VbAdv1_stressed, freq: row.Freq_VbAdv1, prop: row.Prop_VbAdv1}) CREATE (lex)-[:INFLECTS_TO {rel: 'verbal adverb'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+FOREACH(skip IN CASE WHEN trim(row.VbAdv1) <> "" THEN [1] ELSE [] END | CREATE (inf:Inflection {label: row.VbAdv1, type: 'VbAdv1', stressed: row.VbAdv1_stressed, freq: row.Freq_VbAdv1, prop: row.Prop_VbAdv1}) CREATE (lex)-[:INFLECTS_TO {rel: 'verbal adverb'}]->(inf))
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.future, "…") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'future', stressed: row.future_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'future'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.PrAP_forms, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'PrAP', stressed: row.PrAP_forms_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'present active participle'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.PAP_forms, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'PAP', stressed: row.PAP_forms_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'past active participle'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.PrPP_forms, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'PrPP', stressed: row.PrPP_forms_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'present passive participle'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.PPP_forms, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'PPP', stressed: row.PPP_forms_stressed})
+CREATE (lex)-[:INFLECTS_TO {rel: 'past passive participle'}]->(inf)
+
+LOAD CSV WITH HEADERS FROM "file:///sept2017.csv" AS row
+with row, split(row.VbAdv2, ";") AS words
+MATCH (lex:Lexeme {id: row.UniqueID, pos: 'verbpairs'})
+UNWIND words as word
+CREATE (inf:Inflection {label: trim(word), type:'VbAdv2', stressed: row.VbAdv2_stressed, freq: row.Freq_VbAdv2, prop: row.Prop_VbAdv2})
+CREATE (lex)-[:INFLECTS_TO {rel: 'secondary verbal adverb'}]->(inf)
+
+MATCH (a:Lexeme {pos:'verbpairs'})
+CREATE (a)-[:INFLECTS_TO {rel: 'infinitive'}]->(b:Inflection {label: a.label, stressed: a.stressed, type:'infinitive'})
+
